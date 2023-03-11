@@ -1,5 +1,9 @@
 package edu.najah.cap;
 
+import edu.najah.cap.ex.EditorException;
+import edu.najah.cap.ex.EditorSaveAsException;
+import edu.najah.cap.ex.EditorSaveException;
+
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -11,6 +15,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JEditorPane;
 import javax.swing.JFileChooser;
@@ -32,10 +38,14 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 	}
 
 	public JEditorPane TP;//Text Panel
-	private JMenuBar menu;//Menu
-	private JMenuItem copy, paste, cut, move;
+	public JMenuBar menu;//Menu
+	public JMenuItem copy, paste, cut, move;
 	public boolean changed = false;
-	private File file;
+	protected File file;
+	
+	private String[] actions = {"Open","Save","New","Edit","Quit", "Save as..."};
+	
+	protected JMenu jmfile;
 
 	public Editor() {
 		//Editor the name of our application
@@ -60,37 +70,37 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 	}
 
 	private void buildFileMenu() {
-		JMenu file = new JMenu("File");
-		file.setMnemonic('F');
-		menu.add(file);
-		JMenuItem n = new JMenuItem("New");
+		jmfile = new JMenu("File");
+		jmfile.setMnemonic('F');
+		menu.add(jmfile);
+		JMenuItem n = new JMenuItem(actions[2]);
 		n.setMnemonic('N');
 		n.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK));
 		n.addActionListener(this);
-		file.add(n);
-		JMenuItem open = new JMenuItem("Open");
-		file.add(open);
+		jmfile.add(n);
+		JMenuItem open = new JMenuItem(actions[0]);
+		jmfile.add(open);
 		open.addActionListener(this);
 		open.setMnemonic('O');
 		open.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
-		JMenuItem save = new JMenuItem("Save");
-		file.add(save);
+		JMenuItem save = new JMenuItem(actions[1]);
+		jmfile.add(save);
 		save.setMnemonic('S');
 		save.addActionListener(this);
 		save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
-		JMenuItem saveas = new JMenuItem("Save as...");
+		JMenuItem saveas = new JMenuItem(actions[5]);
 		saveas.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK));
-		file.add(saveas);
+		jmfile.add(saveas);
 		saveas.addActionListener(this);
-		JMenuItem quit = new JMenuItem("Quit");
-		file.add(quit);
+		JMenuItem quit = new JMenuItem(actions[4]);
+		jmfile.add(quit);
 		quit.addActionListener(this);
 		quit.setMnemonic('Q');
 		quit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_DOWN_MASK));
 	}
 
 	private void buildEditMenu() {
-		JMenu edit = new JMenu("Edit");
+		JMenu edit = new JMenu(actions[3]);
 		menu.add(edit);
 		edit.setMnemonic('E');
 		// cut
@@ -136,11 +146,11 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		String action = e.getActionCommand();
-		if (action.equals("Quit")) {
+		if (action.equals(actions[4])) {
 			System.exit(0);
-		} else if (action.equals("Open")) {
+		} else if (action.equals(actions[0])) {
 			loadFile();
-		} else if (action.equals("Save")) {
+		} else if (action.equals(actions[1])) {
 			//Save file
 			int ans = 0;
 			if (changed) {
@@ -150,13 +160,13 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 			//1 value from class method if NO is chosen.
 			if (ans != 1) {
 				if (file == null) {
-					saveAs("Save");
+					saveAs(actions[1]);
 				} else {
 					String text = TP.getText();
 					System.out.println(text);
 					try (PrintWriter writer = new PrintWriter(file);){
 						if (!file.canWrite())
-							throw new Exception("Cannot write file!");
+							throw new EditorSaveException("Cannot write file!");
 						writer.write(text);
 						changed = false;
 					} catch (Exception ex) {
@@ -164,7 +174,7 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 					}
 				}
 			}
-		} else if (action.equals("New")) {
+		} else if (action.equals(actions[2])) {
 			//New file 
 			if (changed) {
 				//Save file 
@@ -175,9 +185,11 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 					//1 value from class method if NO is chosen.
 					if (ans == 1)
 						return;
+				} else {
+					return;
 				}
 				if (file == null) {
-					saveAs("Save");
+					saveAs(actions[1]);
 					return;
 				}
 				String text = TP.getText();
@@ -195,8 +207,8 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 			TP.setText("");
 			changed = false;
 			setTitle("Editor");
-		} else if (action.equals("Save as...")) {
-			saveAs("Save as...");
+		} else if (action.equals(actions[5])) {
+			saveAs(actions[5]);
 		} else if (action.equals("Select All")) {
 			TP.selectAll();
 		} else if (action.equals("Copy")) {
@@ -228,14 +240,18 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 								0, 2);//0 means yes and no question and 2 mean warning dialog
 						if (ans == 1)// no option 
 							return;
+					} else {
+						System.out.println("No change");
+						return;
 					}
 					if (file == null) {
-						saveAs("Save");
+						saveAs(actions[1]);
 						return;
 					}
 					String text = TP.getText();
 					System.out.println(text);
-					try (PrintWriter writer = new PrintWriter(file);){
+					try {
+						PrintWriter writer = new PrintWriter(file);
 						if (!file.canWrite())
 							throw new Exception("Cannot write file!");
 						writer.write(text);
@@ -271,21 +287,28 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 
 	
 	private void saveAs(String dialogTitle) {
+		dialogTitle = dialogTitle.toUpperCase();
 		JFileChooser dialog = new JFileChooser(System.getProperty("user.home"));
 		dialog.setDialogTitle(dialogTitle);
 		int result = dialog.showSaveDialog(this);
 		if (result != 0)//0 value if approve (yes, ok) is chosen.
 			return;
 		file = dialog.getSelectedFile();
-		try (PrintWriter writer = new PrintWriter(file);){
-			writer.write(TP.getText());
-			changed = false;
-			setTitle("Editor - " + file.getName());
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		PrintWriter writer = getWriter(file);
+		writer.write(TP.getText());
+		changed = false;
+		setTitle("Editor - " + file.getName());
+	}
+
+	private static PrintWriter getWriter(File file) {
+		try {
+			return new PrintWriter(file);
+		} catch (Exception e){
+			return null;
 		}
 	}
-	private void saveAsText(String dialogTitle) {
+
+	private void saveAsText(String dialogTitle) throws EditorSaveAsException {
 		JFileChooser dialog = new JFileChooser(System.getProperty("user.home"));
 		dialog.setDialogTitle(dialogTitle);
 		int result = dialog.showSaveDialog(this);
@@ -297,7 +320,7 @@ public class Editor extends JFrame implements ActionListener, DocumentListener {
 			changed = false;
 			setTitle("Save as Text Editor - " + file.getName());
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			throw new EditorSaveAsException(e.getMessage());
 		}
 	}
 
