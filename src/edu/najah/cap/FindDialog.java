@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
@@ -28,8 +27,7 @@ public class FindDialog extends JDialog implements ActionListener, KeyListener ,
 	JButton find;
 	JButton	close;
 	boolean finishedFinding = true;
-	Matcher matcher;
-
+	transient Matcher matcher;
 
 	private static final Logger LOGGER = Logger.getLogger(FindDialog.class.getName());
 	public FindDialog(Editor parent, boolean modal) {
